@@ -1,6 +1,6 @@
 # Maintainer: Joan <sprite_eagles.3y@icloud.com>
 pkgname=scanlab
-pkgver=0.1.0
+pkgver=0.1.1
 pkgrel=1
 pkgdesc="Aplicació d'escaneig per a l'Epson Perfection V500 Photo (GUI PySide6 sobre SANE)"
 arch=('any')
@@ -22,9 +22,13 @@ package() {
   cp -r scanlab "$pkgdir/usr/share/scanlab/"
   install -Dm644 launcher.py "$pkgdir/usr/share/scanlab/launcher.py"
 
-  # Llançador, .desktop i llicència
+  # Llançador, .desktop, icona i llicència
   install -Dm755 packaging/linux/scanlab "$pkgdir/usr/bin/scanlab"
   install -Dm644 packaging/linux/scanlab.desktop \
     "$pkgdir/usr/share/applications/scanlab.desktop"
+  install -Dm644 packaging/icons/ScanLab.svg \
+    "$pkgdir/usr/share/icons/hicolor/scalable/apps/scanlab.svg"
+  install -Dm644 packaging/icons/ScanLab_1024.png \
+    "$pkgdir/usr/share/icons/hicolor/1024x1024/apps/scanlab.png"
   install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }

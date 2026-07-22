@@ -4,7 +4,7 @@
 ; Resultado: packaging\windows\Output\ScanLab-Setup.exe
 
 #define AppName "ScanLab"
-#define AppVersion "0.1.0"
+#define AppVersion "0.1.1"
 #define AppPublisher "Joan"
 #define AppExe "ScanLab.exe"
 
@@ -21,6 +21,7 @@ SolidCompression=yes
 WizardStyle=modern
 ArchitecturesInstallIn64BitMode=x64compatible
 UninstallDisplayIcon={app}\{#AppExe}
+SetupIconFile=..\icons\ScanLab.ico
 
 [Languages]
 Name: "catalan"; MessagesFile: "compiler:Languages\Catalan.isl"

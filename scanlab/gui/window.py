@@ -6,10 +6,11 @@ configuració de desar) i «Visualitza» (superposicions de la selecció).
 """
 
 import os
+import sys
 from dataclasses import asdict
 
 from PIL import Image
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets
 
 from scanlab.gui import config
 from scanlab.gui.dialogs import (
@@ -660,9 +661,24 @@ class MainWindow(QtWidgets.QMainWindow):
         QtWidgets.QMessageBox.warning(self, "ScanLab", message)
 
 
+def _icon_path():
+    base = getattr(sys, "_MEIPASS", None)  # app empaquetada amb PyInstaller
+    if base:
+        path = os.path.join(base, "ScanLab_1024.png")
+    else:
+        path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "..", "..", "packaging", "icons", "ScanLab_1024.png",
+        )
+    return path if os.path.exists(path) else None
+
+
 def run():
     app = QtWidgets.QApplication([])
     app.setApplicationName("ScanLab")
+    icon = _icon_path()
+    if icon:
+        app.setWindowIcon(QtGui.QIcon(icon))
     window = MainWindow()
     window.show()
     app.exec()

@@ -14,7 +14,10 @@ fi
 
 echo "[1/3] Compilant ScanLab.app..."
 .venv/bin/pyinstaller --noconfirm --clean --windowed --name ScanLab \
-    --osx-bundle-identifier com.joan.scanlab launcher.py
+    --osx-bundle-identifier com.joan.scanlab \
+    --icon packaging/icons/ScanLab.icns \
+    --add-data "packaging/icons/ScanLab_1024.png:." \
+    launcher.py
 
 echo "[2/3] Preparant el DMG (arrossega a Aplicacions)..."
 STAGING="dist/dmg-staging"

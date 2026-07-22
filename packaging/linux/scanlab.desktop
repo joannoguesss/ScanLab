@@ -4,6 +4,6 @@ Name=ScanLab
 Comment=Escàner per a l'Epson Perfection V500 Photo
 Comment[es]=Escáner para el Epson Perfection V500 Photo
 Exec=scanlab
-Icon=scanner
+Icon=scanlab
 Terminal=false
 Categories=Graphics;Scanning;
