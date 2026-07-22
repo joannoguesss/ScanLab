@@ -1,0 +1,59 @@
+# Compila los instaladores al crear una etiqueta vX.Y.Z y los publica
+# como release de GitHub. Ejemplo:
+#   git tag v0.1.0 && git push origin v0.1.0
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch: {}
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Instalar dependencias
+        run: |
+          pip install -r requirements.txt pyinstaller
+      - name: Compilar ScanLab.exe
+        run: pyinstaller --noconfirm --clean --windowed --name ScanLab launcher.py
+      - name: Crear instalador (Inno Setup)
+        run: iscc packaging\windows\installer.iss
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ScanLab-Setup-Windows
+          path: packaging/windows/Output/ScanLab-Setup.exe
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compilar .app y DMG
+        run: sh packaging/macos/build_dmg.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ScanLab-macOS
+          path: dist/ScanLab.dmg
+
+  release:
+    needs: [windows, macos]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ScanLab-Setup.exe
+            ScanLab.dmg
