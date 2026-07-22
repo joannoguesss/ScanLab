@@ -19,10 +19,15 @@ nativa:
 
 ## Instal·lació
 
+**➜ Guia pas a pas per a cada sistema: [INSTALL.md](INSTALL.md)**
+
+Resum: instal·la primer el driver d'Epson del teu sistema (taula de dalt) i
+després:
+
 - **macOS**: baixa `ScanLab.dmg` de les [releases](../../releases), obre'l i
-  arrossega ScanLab a Aplicacions. Instal·la abans el driver ICA d'Epson.
+  arrossega ScanLab a Aplicacions.
 - **Windows**: baixa i executa `ScanLab-Setup.exe` de les
-  [releases](../../releases). Instal·la abans el driver d'Epson.
+  [releases](../../releases).
   Per compilar-lo tu mateix: [packaging/windows/COMPILAR-EN-WINDOWS.md](packaging/windows/COMPILAR-EN-WINDOWS.md).
 - **Arch Linux (AUR)**: `packaging/aur/PKGBUILD` (paquet `scanlab`).
 
