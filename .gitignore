@@ -1,0 +1,14 @@
+# Entornos y artefactos de compilación
+.venv/
+.venv-win/
+dist/
+build/
+*.spec
+__pycache__/
+*.pyc
+
+# Sistema
+.DS_Store
+
+# Salidas de Inno Setup
+packaging/windows/Output/

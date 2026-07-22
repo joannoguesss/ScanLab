@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=ScanLab
+Comment=Escàner per a l'Epson Perfection V500 Photo
+Comment[es]=Escáner para el Epson Perfection V500 Photo
+Exec=scanlab
+Icon=scanner
+Terminal=false
+Categories=Graphics;Scanning;
