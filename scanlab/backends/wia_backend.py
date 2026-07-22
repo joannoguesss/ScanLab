@@ -43,8 +43,9 @@ def _com():
 
 
 class WiaDevice(ScannerDevice):
-    def __init__(self, device):
+    def __init__(self, device, client):
         self._device = device
+        self._client = client
 
     def _item(self):
         return self._device.Items(1)
@@ -102,8 +103,15 @@ class WiaDevice(ScannerDevice):
 
         try:
             wia_image = item.Transfer(FORMAT_BMP)
-        except Exception as exc:
-            raise ScannerError(f"Error durant l'escaneig WIA: {exc}") from exc
+        except Exception:
+            # Alguns drivers només transfereixen via el diàleg comú de WIA.
+            try:
+                dialog = self._client.Dispatch("WIA.CommonDialog")
+                wia_image = dialog.ShowTransfer(item, FORMAT_BMP)
+            except Exception as exc:
+                raise ScannerError(f"Error durant l'escaneig WIA: {exc}") from exc
+        if wia_image is None:
+            raise ScannerError("El driver WIA no ha retornat cap imatge.")
 
         path = tempfile.mktemp(suffix=".bmp", prefix="scanlab_wia_")
         wia_image.SaveFile(path)
@@ -121,19 +129,33 @@ class WiaDevice(ScannerDevice):
 class WiaBackend(ScannerBackend):
     def __init__(self):
         self._infos = {}
+        self._client = None
 
     def list_devices(self) -> list[DeviceInfo]:
         client = _com()
-        manager = client.Dispatch("WIA.DeviceManager")
+        self._client = client
+        try:
+            manager = client.Dispatch("WIA.DeviceManager")
+            infos = manager.DeviceInfos
+        except Exception as exc:
+            raise ScannerError(f"No s'ha pogut obrir el gestor WIA: {exc}") from exc
         devices = []
-        for info in manager.DeviceInfos:
-            if info.Type != _SCANNER_DEVICE_TYPE:
-                continue
+        # Les col·leccions WIA són COM 1-indexades; no sempre són iterables
+        # directament des de win32com, així que fem servir Count + índex.
+        for i in range(1, int(infos.Count) + 1):
+            info = infos(i)
+            try:
+                if int(info.Type) != _SCANNER_DEVICE_TYPE:
+                    continue
+            except Exception:
+                pass  # si Type falla, l'incloem igualment
+
             def _prop(name, default=""):
                 try:
                     return str(info.Properties(name).Value)
                 except Exception:
                     return default
+
             device_id = str(info.DeviceID)
             self._infos[device_id] = info
             devices.append(DeviceInfo(
@@ -149,6 +171,6 @@ class WiaBackend(ScannerBackend):
         if device_id not in self._infos:
             raise ScannerError(f"No es troba l'escàner {device_id!r}")
         try:
-            return WiaDevice(self._infos[device_id].Connect())
+            return WiaDevice(self._infos[device_id].Connect(), self._client)
         except Exception as exc:
             raise ScannerError(f"No s'ha pogut obrir {device_id!r}: {exc}") from exc

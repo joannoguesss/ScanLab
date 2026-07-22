@@ -2,10 +2,23 @@
 
 import json
 import os
+import sys
 
-CONFIG_PATH = os.path.expanduser(
-    "~/Library/Application Support/ScanLab/config.json"
-)
+
+def _config_dir() -> str:
+    if sys.platform == "darwin":
+        return os.path.expanduser("~/Library/Application Support/ScanLab")
+    if sys.platform == "win32":
+        base = os.environ.get("APPDATA", os.path.expanduser("~"))
+        return os.path.join(base, "ScanLab")
+    return os.path.join(
+        os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")),
+        "scanlab",
+    )
+
+
+CONFIG_PATH = os.path.join(_config_dir(), "config.json")
+LOG_PATH = os.path.join(_config_dir(), "worker.log")
 
 
 def load() -> dict:

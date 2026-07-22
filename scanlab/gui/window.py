@@ -19,7 +19,7 @@ from scanlab.gui.dialogs import (
 from scanlab.gui.filesave import FORMATS, FileSaveDialog, SaveSettings
 from scanlab.gui.postprocess import Adjustments, apply as apply_adjustments
 from scanlab.gui.preview import PreviewPane
-from scanlab.gui.runner import ScanRunner
+from scanlab.gui.runner import ScanRunner, worker_command
 from scanlab.settings import ScanSettings
 
 PREVIEW_DPI = 75
@@ -327,6 +327,47 @@ class MainWindow(QtWidgets.QMainWindow):
         self._build_menu()
         self._load_state()
         self.statusBar().showMessage("A punt")
+
+        # Pilot de connexió de l'escàner (verd/vermell) a la barra d'estat.
+        self._connection_label = QtWidgets.QLabel()
+        self.statusBar().addPermanentWidget(self._connection_label)
+        self._set_connection(None)
+        self._poll_process: QtCore.QProcess | None = None
+        self._poll_timer = QtCore.QTimer(self)
+        self._poll_timer.setInterval(8000)
+        self._poll_timer.timeout.connect(self._poll_connection)
+        self._poll_timer.start()
+        QtCore.QTimer.singleShot(300, self._poll_connection)
+
+    # --- pilot de connexió ---
+
+    def _set_connection(self, ok: bool | None):
+        if ok is None:
+            color, text = "#8a8a8a", "Comprovant l'escàner…"
+        elif ok:
+            color, text = "#2fa84f", "Escàner connectat"
+        else:
+            color, text = "#d9403e", "Escàner desconnectat"
+        self._connection_label.setText(
+            f'<span style="color:{color}; font-size:14px">●</span> {text}'
+        )
+
+    def _poll_connection(self):
+        if self.runner.busy():
+            self._set_connection(True)  # si estem escanejant, està connectat
+            return
+        if (self._poll_process is not None
+                and self._poll_process.state() != QtCore.QProcess.NotRunning):
+            return
+        program, args, workdir = worker_command(["list"])
+        process = QtCore.QProcess(self)
+        if workdir:
+            process.setWorkingDirectory(workdir)
+        process.finished.connect(
+            lambda code, _s: self._set_connection(code == 0)
+        )
+        self._poll_process = process
+        process.start(program, args)
 
     def _build_menu(self):
         # Guardem referències per evitar que PySide alliberi els menús natius.
@@ -658,7 +699,16 @@ class MainWindow(QtWidgets.QMainWindow):
         self._pending = None
         self._queue = []
         self._set_idle(f"Error: {message}")
-        QtWidgets.QMessageBox.warning(self, "ScanLab", message)
+        box = QtWidgets.QMessageBox(
+            QtWidgets.QMessageBox.Warning, "ScanLab", message,
+            QtWidgets.QMessageBox.Ok, self,
+        )
+        detail = (self.runner.last_output or "").strip()
+        if detail:
+            box.setDetailedText(
+                f"{detail}\n\nRegistre complet: {config.LOG_PATH}"
+            )
+        box.exec()
 
 
 def _icon_path():
