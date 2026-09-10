@@ -109,8 +109,9 @@ class WiaDevice(ScannerDevice):
                 self._device.Properties(WIA_DOC_HANDLING).Value = 0x40  # TRANSPARENCY
             except Exception as exc:
                 raise ScannerError(
-                    "Aquest driver WIA no permet escanejar pel·lícula; "
-                    "prova-ho amb el flatbed o amb l'Epson Scan original."
+                    "El driver WIA no dona accés a la unitat de transparències. "
+                    "Per a pel·lícula cal la via TWAIN: activa "
+                    "«Eines ▸ Usa l'ajudant de 32 bits»."
                 ) from exc
 
         if settings.area:

@@ -1,6 +1,6 @@
 # Maintainer: Joan <sprite_eagles.3y@icloud.com>
 pkgname=scanlab
-pkgver=0.1.5
+pkgver=0.1.6
 pkgrel=1
 pkgdesc="Aplicació d'escaneig per a l'Epson Perfection V500 Photo (GUI PySide6 sobre SANE)"
 arch=('any')

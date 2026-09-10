@@ -22,12 +22,17 @@ def _no_device_error(backend) -> ScannerError:
     return ScannerError(message)
 
 
-def _pick_device(backend, device_id: str | None):
+def _pick_device(backend, device_id: str | None, prefer: str | None = None):
     if device_id:
         return device_id
     devices = backend.list_devices()
     if not devices:
         raise _no_device_error(backend)
+    if prefer:
+        # Per a pel·lícula volem TWAIN: WIA no dona la unitat de transparències.
+        for device in devices:
+            if device.id.startswith(prefer):
+                return device.id
     return devices[0].id
 
 
@@ -83,7 +88,8 @@ def main(argv=None):
                 print(f"{dev.id}\t{dev.vendor} {dev.model}")
             return 0
 
-        device_id = _pick_device(backend, args.device)
+        prefer = "twain:" if getattr(args, "source", "flatbed") != "flatbed" else None
+        device_id = _pick_device(backend, args.device, prefer=prefer)
 
         if args.command == "caps":
             import json

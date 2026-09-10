@@ -97,7 +97,11 @@ class ScanRunner(QtCore.QObject):
         ]
         if settings.area:
             scan_args += ["--area"] + [f"{v:.2f}" for v in settings.area]
-        program, args, workdir = worker_command(scan_args)
+        # La pel·lícula necessita la unitat de transparències, que només dona
+        # TWAIN: hi anem per l'ajudant de 32 bits, l'únic que pot carregar el
+        # gestor TWAIN que ve amb Windows.
+        force32 = settings.source != "flatbed" and worker32_available()
+        program, args, workdir = worker_command(scan_args, force32=force32)
         process = QtCore.QProcess(self)
         if workdir:
             process.setWorkingDirectory(workdir)
