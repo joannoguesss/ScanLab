@@ -420,17 +420,6 @@ class MainWindow(QtWidgets.QMainWindow):
         )
         self._act_worker32.toggled.connect(self._toggle_worker32)
 
-    def _toggle_worker32(self, checked: bool):
-        set_worker32(checked)
-        self._tried_worker32 = False
-        self._poll_connection()
-
-    def _sync_worker32_action(self):
-        """Reflecteix al menú el canvi automàtic, sense tornar-lo a disparar."""
-        self._act_worker32.blockSignals(True)
-        self._act_worker32.setChecked(using_worker32())
-        self._act_worker32.blockSignals(False)
-
         self._view_menu = self.menuBar().addMenu("Visualitza")
         canvas = self.preview.canvas
         self._view_actions = []
@@ -448,6 +437,17 @@ class MainWindow(QtWidgets.QMainWindow):
                 lambda checked, a=attr: (setattr(canvas, a, checked), canvas.update())
             )
             self._view_actions.append(action)
+
+    def _toggle_worker32(self, checked: bool):
+        set_worker32(checked)
+        self._tried_worker32 = False
+        self._poll_connection()
+
+    def _sync_worker32_action(self):
+        """Reflecteix al menú el canvi automàtic, sense tornar-lo a disparar."""
+        self._act_worker32.blockSignals(True)
+        self._act_worker32.setChecked(using_worker32())
+        self._act_worker32.blockSignals(False)
 
     def _open_diagnostics(self):
         """Informe de què veu ScanLab del sistema i de l'escàner (per a suport)."""

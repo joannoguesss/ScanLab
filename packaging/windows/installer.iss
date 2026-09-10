@@ -4,7 +4,7 @@
 ; Resultado: packaging\windows\Output\ScanLab-Setup.exe
 
 #define AppName "ScanLab"
-#define AppVersion "0.1.4"
+#define AppVersion "0.1.5"
 #define AppPublisher "Joan"
 #define AppExe "ScanLab.exe"
 
