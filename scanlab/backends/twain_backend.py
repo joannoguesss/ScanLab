@@ -8,6 +8,7 @@ snake_case nou), així que totes les crides passen per `_call`, que prova els
 noms possibles.
 """
 
+import logging
 import os
 import tempfile
 
@@ -32,6 +33,9 @@ def _twain_module():
             "Falta el paquet pytwain (pip install pytwain) per parlar amb el "
             "driver de l'Epson."
         ) from exc
+    # pytwain escriu els seus errors a stderr; els recollim nosaltres amb més
+    # context, així que el silenciem per no embrutar el registre.
+    logging.getLogger("twain").setLevel(logging.CRITICAL)
     return twain
 
 
@@ -52,16 +56,37 @@ def _const(twain, name, default):
     return default if value is None else value
 
 
+def _dsm_candidates() -> list[dict]:
+    """Gestors TWAIN (DSM) a provar, en ordre.
+
+    A 64 bits pytwain busca `twaindsm.dll`, que Windows NO porta i s'ha
+    d'instal·lar a part. El clàssic `twain_32.dll` sí que ve amb Windows, però
+    només es pot carregar des d'un procés de 32 bits (per això ScanLab porta
+    l'ajudant `ScanLab-worker32.exe`).
+    """
+    candidates: list[dict] = [{}]  # heurística de pytwain
+    windir = os.environ.get("WINDIR")
+    if windir:
+        candidates.append({"dsm_name": os.path.join(windir, "twain_32.dll")})
+    return candidates
+
+
 def _source_manager(twain):
     errors = []
-    for args in ((0,), ()):
-        try:
-            return twain.SourceManager(*args)
-        except Exception as exc:  # noqa: BLE001 - volem el motiu exacte
-            errors.append(str(exc))
+    for kwargs in _dsm_candidates():
+        for args in ((0,), ()):
+            try:
+                return twain.SourceManager(*args, **kwargs)
+            except Exception as exc:  # noqa: BLE001 - volem el motiu exacte
+                detail = str(exc)
+                if detail not in errors:
+                    errors.append(detail)
+    hint = ""
+    if any("twaindsm" in e.lower() for e in errors):
+        hint = (" Aquest procés és de 64 bits i Windows no porta twaindsm.dll; "
+                "ScanLab hauria de fer servir l'ajudant de 32 bits.")
     raise ScannerError(
-        "No s'ha pogut iniciar TWAIN. Comprova que l'Epson Scan està "
-        "instal·lat. Detalls: " + " | ".join(errors)
+        "No s'ha pogut iniciar TWAIN." + hint + " Detalls: " + " | ".join(errors)
     )
 
 

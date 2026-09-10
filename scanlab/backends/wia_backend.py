@@ -27,6 +27,17 @@ FORMAT_BMP = "{B96B3CAB-0728-11D3-9D7B-0000F81EF32E}"
 
 _INTENTS = {"color": 1, "gray": 2, "lineart": 4}
 
+_PROP_NAMES = {
+    WIA_INTENT: "el tipus d'imatge",
+    WIA_DPI_X: "la resolució horitzontal",
+    WIA_DPI_Y: "la resolució vertical",
+    WIA_START_X: "l'inici horitzontal de l'àrea",
+    WIA_START_Y: "l'inici vertical de l'àrea",
+    WIA_EXTENT_X: "l'amplada de l'àrea",
+    WIA_EXTENT_Y: "l'alçada de l'àrea",
+    WIA_BIT_DEPTH: "la profunditat de color",
+}
+
 _SCANNER_DEVICE_TYPE = 1
 
 
@@ -51,12 +62,18 @@ class WiaDevice(ScannerDevice):
         return self._device.Items(1)
 
     @staticmethod
-    def _set(properties, prop_id: str, value):
+    def _set(properties, prop_id: str, value, required=True) -> bool:
+        """Fixa una propietat WIA. Amb `required=False` no falla si el driver
+        no la deixa escriure (moltes són de només lectura segons el model)."""
         try:
             properties(prop_id).Value = value
+            return True
         except Exception as exc:
+            if not required:
+                return False
+            name = _PROP_NAMES.get(prop_id, prop_id)
             raise ScannerError(
-                f"No s'ha pogut fixar la propietat WIA {prop_id} = {value!r}: {exc}"
+                f"El driver no accepta {name} = {value!r}: {exc}"
             ) from exc
 
     def capabilities(self) -> dict:
@@ -80,7 +97,10 @@ class WiaDevice(ScannerDevice):
         self._set(props, WIA_DPI_X, settings.resolution)
         self._set(props, WIA_DPI_Y, settings.resolution)
         if settings.mode == "color":
-            self._set(props, WIA_BIT_DEPTH, 48 if settings.depth == 16 else 24)
+            # Molts drivers (el de l'Epson entre ells) la deriven del tipus
+            # d'imatge i no la deixen escriure: si falla, no passa res.
+            self._set(props, WIA_BIT_DEPTH, 48 if settings.depth == 16 else 24,
+                      required=False)
 
         if settings.source != "flatbed":
             # Molts drivers WIA no exposen la unitat de transparències; ho
@@ -173,4 +193,10 @@ class WiaBackend(ScannerBackend):
         try:
             return WiaDevice(self._infos[device_id].Connect(), self._client)
         except Exception as exc:
+            text = str(exc).lower()
+            if "ocupado" in text or "busy" in text or "ocupat" in text:
+                raise ScannerError(
+                    "L'escàner està ocupat: tanca l'Epson Scan (o el programa "
+                    "que l'estigui fent servir) i torna-ho a provar."
+                ) from exc
             raise ScannerError(f"No s'ha pogut obrir {device_id!r}: {exc}") from exc

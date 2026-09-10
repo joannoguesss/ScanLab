@@ -385,10 +385,12 @@ class MainWindow(QtWidgets.QMainWindow):
         if not using_worker32() and worker32_available() and not self._tried_worker32:
             self._tried_worker32 = True
             set_worker32(True)
+            self._sync_worker32_action()
             self._poll_connection()
             return
         if using_worker32() and self._tried_worker32:
             set_worker32(False)   # tampoc va: tornem al camí principal
+            self._sync_worker32_action()
         self._tried_worker32 = False
         self._set_connection(False)
 
@@ -409,6 +411,25 @@ class MainWindow(QtWidgets.QMainWindow):
         self._act_save.triggered.connect(self._file_save_dialog)
         self._act_diagnose = self._tools_menu.addAction("Diagnòstic…")
         self._act_diagnose.triggered.connect(self._open_diagnostics)
+        self._act_worker32 = self._tools_menu.addAction("Usa l'ajudant de 32 bits")
+        self._act_worker32.setCheckable(True)
+        self._act_worker32.setEnabled(worker32_available())
+        self._act_worker32.setChecked(using_worker32())
+        self._act_worker32.setToolTip(
+            "Necessari per als drivers TWAIN antics (i per escanejar pel·lícula)"
+        )
+        self._act_worker32.toggled.connect(self._toggle_worker32)
+
+    def _toggle_worker32(self, checked: bool):
+        set_worker32(checked)
+        self._tried_worker32 = False
+        self._poll_connection()
+
+    def _sync_worker32_action(self):
+        """Reflecteix al menú el canvi automàtic, sense tornar-lo a disparar."""
+        self._act_worker32.blockSignals(True)
+        self._act_worker32.setChecked(using_worker32())
+        self._act_worker32.blockSignals(False)
 
         self._view_menu = self.menuBar().addMenu("Visualitza")
         canvas = self.preview.canvas
@@ -619,7 +640,11 @@ class MainWindow(QtWidgets.QMainWindow):
                 action.setChecked(bool(checked))
         self._act_histogram.setChecked(bool(state.get("histogram_visible", True)))
         if state.get("worker32"):
-            set_worker32(True)   # a la sessió anterior calia l'ajudant de 32 bits
+            # A la sessió anterior calia l'ajudant de 32 bits.
+            set_worker32(True)
+            self._act_worker32.blockSignals(True)
+            self._act_worker32.setChecked(using_worker32())
+            self._act_worker32.blockSignals(False)
 
         geometry = state.get("geometry")
         if geometry:
