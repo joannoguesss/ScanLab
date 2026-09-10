@@ -351,6 +351,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self._connection_label.setText(
             f'<span style="color:{color}; font-size:14px">●</span> {text}'
         )
+        self._connection_label.setToolTip(
+            "Eines ▸ Diagnòstic… per veure què detecta ScanLab"
+        )
 
     def _poll_connection(self):
         if self.runner.busy():
@@ -384,6 +387,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self._tools_menu.addSeparator()
         self._act_save = self._tools_menu.addAction("Configuració de desar…")
         self._act_save.triggered.connect(self._file_save_dialog)
+        self._act_diagnose = self._tools_menu.addAction("Diagnòstic…")
+        self._act_diagnose.triggered.connect(self._open_diagnostics)
 
         self._view_menu = self.menuBar().addMenu("Visualitza")
         canvas = self.preview.canvas
@@ -402,6 +407,49 @@ class MainWindow(QtWidgets.QMainWindow):
                 lambda checked, a=attr: (setattr(canvas, a, checked), canvas.update())
             )
             self._view_actions.append(action)
+
+    def _open_diagnostics(self):
+        """Informe de què veu ScanLab del sistema i de l'escàner (per a suport)."""
+        dialog = QtWidgets.QDialog(self)
+        dialog.setWindowTitle("Diagnòstic")
+        dialog.resize(700, 480)
+        layout = QtWidgets.QVBoxLayout(dialog)
+
+        text = QtWidgets.QPlainTextEdit("Generant l'informe…")
+        text.setReadOnly(True)
+        text.setLineWrapMode(QtWidgets.QPlainTextEdit.NoWrap)
+        text.setFont(
+            QtGui.QFontDatabase.systemFont(QtGui.QFontDatabase.FixedFont)
+        )
+        layout.addWidget(text, 1)
+
+        buttons = QtWidgets.QHBoxLayout()
+        copy_btn = QtWidgets.QPushButton("Copia")
+        copy_btn.clicked.connect(
+            lambda: QtWidgets.QApplication.clipboard().setText(text.toPlainText())
+        )
+        close_btn = QtWidgets.QPushButton("Tanca")
+        close_btn.clicked.connect(dialog.accept)
+        buttons.addWidget(copy_btn)
+        buttons.addStretch(1)
+        buttons.addWidget(close_btn)
+        layout.addLayout(buttons)
+
+        program, args, workdir = worker_command(["diagnose"])
+        process = QtCore.QProcess(dialog)
+        if workdir:
+            process.setWorkingDirectory(workdir)
+        process.setProcessChannelMode(QtCore.QProcess.MergedChannels)
+
+        def _done(code, _status):
+            output = bytes(process.readAllStandardOutput()).decode(
+                "utf-8", errors="replace"
+            ).strip()
+            text.setPlainText(output or f"(sense sortida, codi {code})")
+
+        process.finished.connect(_done)
+        process.start(program, args)
+        dialog.exec()
 
     def _on_levels_changed(self, levels):
         self.settings_panel.levels = dict(levels)

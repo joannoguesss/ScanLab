@@ -43,7 +43,7 @@ instalar el driver de Epson del V500 (una sola vez) y luego ScanLab.
    https://epson.com/Support/Scanners/Perfection-Series/Epson-Perfection-V500-Photo/s/SPT_B11B189011
 2. Elige tu Windows en el desplegable y descarga e instala
    **"Scanner Driver and EPSON Scan Utility"** (`PerfV500_3770_AM.exe`).
-   Esto instala el driver WIA que usa ScanLab.
+   Esto instala el driver **TWAIN** con el que habla ScanLab.
 
 ### 2. ScanLab
 
@@ -52,6 +52,20 @@ instalar el driver de Epson del V500 (una sola vez) y luego ScanLab.
    **"Más información" → "Ejecutar de todas formas"**.
 3. Sigue el asistente (catalán o castellano). Al acabar tendrás ScanLab en el
    menú Inicio.
+
+### Si ScanLab no detecta el escáner en Windows
+
+El V500 es un escáner **TWAIN**: en muchos equipos no tiene driver WIA (por eso
+"Fax y Escáner de Windows" tampoco lo ve, aunque Epson Scan sí funcione).
+ScanLab usa TWAIN primero, pero **un programa de 64 bits no puede cargar un
+driver TWAIN de 32 bits**, y el del V500 suele serlo.
+
+1. Abre ScanLab y ve a **Eines ▸ Diagnòstic…**. Mira la sección *TWAIN*:
+   - Si pone **"Fonts TWAIN trobades: 0"** → instala la versión de 32 bits:
+     **`ScanLab-Setup-x86.exe`**, en la misma página de Releases.
+   - Si aparece el escáner en la lista pero falla al escanear, copia el
+     informe (botón **Copia**) y ábrelo como incidencia en GitHub.
+2. El registro completo está en `%APPDATA%\ScanLab\worker.log`.
 
 > ¿Prefieres compilarlo tú? Sigue
 > [packaging/windows/COMPILAR-EN-WINDOWS.md](packaging/windows/COMPILAR-EN-WINDOWS.md).
@@ -104,6 +118,21 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 ```
 
 ---
+
+## Desinstalar / reinstalar
+
+**No hace falta desinstalar para actualizar**: ejecuta el instalador nuevo y
+reemplaza la versión anterior.
+
+- **Windows**: *Configuración → Aplicaciones → Aplicaciones instaladas →
+  ScanLab → Desinstalar*. También hay un acceso directo
+  **"Desinstalar ScanLab"** en la carpeta ScanLab del menú Inicio.
+- **macOS**: arrastra `ScanLab.app` de Aplicaciones a la papelera.
+- **Arch Linux**: `sudo pacman -R scanlab`.
+
+Los ajustes guardados están en `%APPDATA%\ScanLab` (Windows),
+`~/Library/Application Support/ScanLab` (macOS) o `~/.config/scanlab`
+(Linux); bórralos si quieres empezar de cero.
 
 ## Problemas frecuentes
 

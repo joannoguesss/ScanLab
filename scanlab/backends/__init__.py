@@ -7,9 +7,10 @@ from scanlab.backends.base import ScannerBackend
 
 def get_backend() -> ScannerBackend:
     if sys.platform == "win32":
-        from scanlab.backends.wia_backend import WiaBackend
+        # TWAIN (el camí de l'Epson Scan) i, si no, WIA.
+        from scanlab.backends.windows_backend import WindowsBackend
 
-        return WiaBackend()
+        return WindowsBackend()
     if sys.platform == "darwin":
         # El V500 no funciona con el backend libre de SANE (protocolo ESC/I-2);
         # en macOS usamos ImageCaptureCore con el driver ICA oficial de Epson.

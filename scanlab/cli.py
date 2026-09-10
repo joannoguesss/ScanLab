@@ -14,14 +14,20 @@ from scanlab.backends.base import ScannerError
 from scanlab.settings import ScanSettings
 
 
+def _no_device_error(backend) -> ScannerError:
+    message = "No se detecta ningún escáner. Comprueba que está conectado y encendido."
+    detail = " | ".join(getattr(backend, "errors", []))
+    if detail:
+        message += f" Detalles: {detail}"
+    return ScannerError(message)
+
+
 def _pick_device(backend, device_id: str | None):
     if device_id:
         return device_id
     devices = backend.list_devices()
     if not devices:
-        raise ScannerError(
-            "No se detecta ningún escáner. Comprueba que está conectado y encendido."
-        )
+        raise _no_device_error(backend)
     return devices[0].id
 
 
@@ -30,6 +36,7 @@ def main(argv=None):
     sub = parser.add_subparsers(dest="command", required=True)
 
     sub.add_parser("list", help="Lista los escáneres detectados")
+    sub.add_parser("diagnose", help="Informe de diagnóstico para soporte")
 
     caps = sub.add_parser("caps", help="Muestra las capacidades del escáner")
     caps.add_argument("--device")
@@ -50,13 +57,27 @@ def main(argv=None):
         )
 
     args = parser.parse_args(argv)
+
+    # Los mensajes llevan acentos; sin esto Windows los escribe ilegibles.
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
+
+    if args.command == "diagnose":
+        from scanlab.diagnose import report
+
+        print(report())
+        return 0
+
     backend = get_backend()
 
     try:
         if args.command == "list":
             devices = backend.list_devices()
             if not devices:
-                print("No se detecta ningún escáner.")
+                print(_no_device_error(backend))
                 return 1
             for dev in devices:
                 print(f"{dev.id}\t{dev.vendor} {dev.model}")

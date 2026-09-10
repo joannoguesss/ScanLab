@@ -21,7 +21,7 @@ echo [2/4] Instalando dependencias...
 .venv-win\Scripts\pip install -r requirements.txt pyinstaller || goto :error
 
 echo [3/4] Compilando con PyInstaller...
-.venv-win\Scripts\pyinstaller --noconfirm --clean --windowed --name ScanLab --icon packaging\icons\ScanLab.ico --add-data "packaging\icons\ScanLab_1024.png;." launcher.py || goto :error
+.venv-win\Scripts\pyinstaller --noconfirm --clean --windowed --name ScanLab --icon packaging\icons\ScanLab.ico --add-data "packaging\icons\ScanLab_1024.png;." --collect-all twain launcher.py || goto :error
 
 echo [4/4] Hecho!
 echo.

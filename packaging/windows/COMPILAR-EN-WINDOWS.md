@@ -43,6 +43,15 @@ Ese `.exe` ya funciona: pruébalo con el escáner conectado por USB.
 1. Abre `packaging\windows\installer.iss` con Inno Setup.
 2. Pulsa **Compile** (Ctrl+F9).
 3. El instalador queda en `packaging\windows\Output\ScanLab-Setup.exe`.
+   Incluye desinstalador (Configuración → Aplicaciones, y un acceso directo
+   en el menú Inicio).
+
+Para la variante de 32 bits (necesaria si el driver TWAIN del escáner lo es),
+compila con un Python de 32 bits y luego:
+
+```
+iscc /DX86 /F"ScanLab-Setup-x86" packaging\windows\installer.iss
+```
 
 ## Notas
 
