@@ -7,7 +7,6 @@
 #define AppVersion "0.1.3"
 #define AppPublisher "Joan"
 #define AppExe "ScanLab.exe"
-; Compilar la variant de 32 bits:  iscc /DX86 /F"ScanLab-Setup-x86" installer.iss
 
 [Setup]
 AppId={{7E9C3B1A-5D24-4F8E-9A61-SCANLAB0V500}
@@ -20,9 +19,7 @@ OutputBaseFilename=ScanLab-Setup
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
-#ifndef X86
 ArchitecturesInstallIn64BitMode=x64compatible
-#endif
 UninstallDisplayIcon={app}\{#AppExe}
 UninstallDisplayName={#AppName}
 SetupIconFile=..\icons\ScanLab.ico

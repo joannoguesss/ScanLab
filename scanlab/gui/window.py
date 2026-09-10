@@ -19,7 +19,9 @@ from scanlab.gui.dialogs import (
 from scanlab.gui.filesave import FORMATS, FileSaveDialog, SaveSettings
 from scanlab.gui.postprocess import Adjustments, apply as apply_adjustments
 from scanlab.gui.preview import PreviewPane
-from scanlab.gui.runner import ScanRunner, worker_command
+from scanlab.gui.runner import (
+    ScanRunner, set_worker32, using_worker32, worker32_available, worker_command,
+)
 from scanlab.settings import ScanSettings
 
 PREVIEW_DPI = 75
@@ -332,6 +334,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self._connection_label = QtWidgets.QLabel()
         self.statusBar().addPermanentWidget(self._connection_label)
         self._set_connection(None)
+        self._tried_worker32 = False
         self._poll_process: QtCore.QProcess | None = None
         self._poll_timer = QtCore.QTimer(self)
         self._poll_timer.setInterval(8000)
@@ -366,11 +369,28 @@ class MainWindow(QtWidgets.QMainWindow):
         process = QtCore.QProcess(self)
         if workdir:
             process.setWorkingDirectory(workdir)
-        process.finished.connect(
-            lambda code, _s: self._set_connection(code == 0)
-        )
+        process.finished.connect(lambda code, _s: self._connection_result(code))
         self._poll_process = process
         process.start(program, args)
+
+    def _connection_result(self, code: int):
+        """Si el camí de 64 bits no veu res, prova l'ajudant de 32 bits.
+
+        Els drivers TWAIN antics només són de 32 bits i un procés de 64 no els
+        pot carregar; el canvi és automàtic i es recorda.
+        """
+        if code == 0:
+            self._set_connection(True)
+            return
+        if not using_worker32() and worker32_available() and not self._tried_worker32:
+            self._tried_worker32 = True
+            set_worker32(True)
+            self._poll_connection()
+            return
+        if using_worker32() and self._tried_worker32:
+            set_worker32(False)   # tampoc va: tornem al camí principal
+        self._tried_worker32 = False
+        self._set_connection(False)
 
     def _build_menu(self):
         # Guardem referències per evitar que PySide alliberi els menús natius.
@@ -435,20 +455,35 @@ class MainWindow(QtWidgets.QMainWindow):
         buttons.addWidget(close_btn)
         layout.addLayout(buttons)
 
-        program, args, workdir = worker_command(["diagnose"])
-        process = QtCore.QProcess(dialog)
-        if workdir:
-            process.setWorkingDirectory(workdir)
-        process.setProcessChannelMode(QtCore.QProcess.MergedChannels)
+        sections: list[str] = []
 
-        def _done(code, _status):
-            output = bytes(process.readAllStandardOutput()).decode(
-                "utf-8", errors="replace"
-            ).strip()
-            text.setPlainText(output or f"(sense sortida, codi {code})")
+        def _run(command, header, then=None):
+            program, args, workdir = command
+            process = QtCore.QProcess(dialog)
+            if workdir:
+                process.setWorkingDirectory(workdir)
+            process.setProcessChannelMode(QtCore.QProcess.MergedChannels)
 
-        process.finished.connect(_done)
-        process.start(program, args)
+            def _done(code, _status):
+                output = bytes(process.readAllStandardOutput()).decode(
+                    "utf-8", errors="replace"
+                ).strip()
+                if not output:
+                    output = f"(sense sortida, codi {code})"
+                sections.append(f"===== {header} =====\n{output}")
+                text.setPlainText("\n\n".join(sections))
+                if then is not None:
+                    then()
+
+            process.finished.connect(_done)
+            process.start(program, args)
+
+        def _also_32_bits():
+            # L'informe del camí de 32 bits: és el que veu els drivers antics.
+            if worker32_available() and not using_worker32():
+                _run(worker_command(["diagnose"], force32=True), "AJUDANT DE 32 BITS")
+
+        _run(worker_command(["diagnose"]), "PROCÉS PRINCIPAL", _also_32_bits)
         dialog.exec()
 
     def _on_levels_changed(self, levels):
@@ -504,6 +539,7 @@ class MainWindow(QtWidgets.QMainWindow):
             "save": asdict(self.save_settings),
             "view": [a.isChecked() for a in self._view_actions],
             "histogram_visible": self._act_histogram.isChecked(),
+            "worker32": using_worker32(),
             "geometry": bytes(self.saveGeometry().toBase64()).decode("ascii"),
         }
         config.save(state)
@@ -582,6 +618,8 @@ class MainWindow(QtWidgets.QMainWindow):
             for action, checked in zip(self._view_actions, view):
                 action.setChecked(bool(checked))
         self._act_histogram.setChecked(bool(state.get("histogram_visible", True)))
+        if state.get("worker32"):
+            set_worker32(True)   # a la sessió anterior calia l'ajudant de 32 bits
 
         geometry = state.get("geometry")
         if geometry:

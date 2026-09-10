@@ -19,8 +19,38 @@ from scanlab.settings import ScanSettings
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
-def worker_command(cli_args: list[str]) -> tuple[str, list[str], str]:
+# Ajudant de 32 bits: els drivers TWAIN antics (com el del V500) solen ser de
+# 32 bits i un procés de 64 no els pot carregar. L'app en porta un al costat.
+_use_worker32 = False
+
+
+def worker32_path() -> str | None:
+    """Ruta de l'ajudant de 32 bits, si l'app en porta un."""
+    if sys.platform != "win32" or not getattr(sys, "frozen", False):
+        return None
+    path = os.path.join(os.path.dirname(sys.executable), "ScanLab-worker32.exe")
+    return path if os.path.exists(path) else None
+
+
+def worker32_available() -> bool:
+    return worker32_path() is not None
+
+
+def using_worker32() -> bool:
+    return _use_worker32
+
+
+def set_worker32(enabled: bool) -> None:
+    global _use_worker32
+    _use_worker32 = bool(enabled) and worker32_available()
+
+
+def worker_command(cli_args: list[str], force32: bool = False) -> tuple[str, list[str], str]:
     """(programa, arguments, directori de treball) per al procés d'escaneig."""
+    if force32 or _use_worker32:
+        exe = worker32_path()
+        if exe:
+            return exe, list(cli_args), ""
     if getattr(sys, "frozen", False):
         return sys.executable, ["--scan-worker"] + cli_args, ""
     return sys.executable, ["-m", "scanlab"] + cli_args, _PROJECT_ROOT

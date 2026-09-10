@@ -9,7 +9,28 @@ on:
   workflow_dispatch: {}
 
 jobs:
+  # Els drivers TWAIN d'escàners antics (com el V500) solen ser de 32 bits i un
+  # procés de 64 no els pot carregar. PySide6 no té versió de 32 bits, així que
+  # compilem només un ajudant sense interfície i el posem dins de l'app.
+  worker32:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          architecture: x86
+      - name: Instalar dependencias (sin PySide6, no existe en 32 bits)
+        run: pip install pillow pytwain pywin32 pyinstaller
+      - name: Compilar ScanLab-worker32.exe
+        run: pyinstaller --noconfirm --clean --windowed --onefile --name ScanLab-worker32 --collect-all twain --exclude-module PySide6 worker_launcher.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: worker32
+          path: dist/ScanLab-worker32.exe
+
   windows:
+    needs: worker32
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,34 +42,18 @@ jobs:
           pip install -r requirements.txt pyinstaller
       - name: Compilar ScanLab.exe
         run: pyinstaller --noconfirm --clean --windowed --name ScanLab --icon packaging\icons\ScanLab.ico --add-data "packaging\icons\ScanLab_1024.png;." --collect-all twain launcher.py
+      - uses: actions/download-artifact@v4
+        with:
+          name: worker32
+          path: worker32
+      - name: Incluir el ayudante de 32 bits en la app
+        run: Copy-Item worker32\ScanLab-worker32.exe dist\ScanLab\
       - name: Crear instalador (Inno Setup)
         run: iscc packaging\windows\installer.iss
       - uses: actions/upload-artifact@v4
         with:
           name: ScanLab-Setup-Windows
           path: packaging/windows/Output/ScanLab-Setup.exe
-
-  # Molts drivers TWAIN d'escàners antics (com el V500) només són de 32 bits:
-  # un ScanLab de 64 bits no els pot carregar. Publiquem també la versió x86.
-  windows-x86:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          architecture: x86
-      - name: Instalar dependencias
-        run: |
-          pip install -r requirements.txt pyinstaller
-      - name: Compilar ScanLab.exe (32 bits)
-        run: pyinstaller --noconfirm --clean --windowed --name ScanLab --icon packaging\icons\ScanLab.ico --add-data "packaging\icons\ScanLab_1024.png;." --collect-all twain launcher.py
-      - name: Crear instalador (Inno Setup)
-        run: iscc /DX86 /F"ScanLab-Setup-x86" packaging\windows\installer.iss
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ScanLab-Setup-Windows-x86
-          path: packaging/windows/Output/ScanLab-Setup-x86.exe
 
   macos:
     runs-on: macos-latest
@@ -65,7 +70,7 @@ jobs:
           path: dist/ScanLab.dmg
 
   release:
-    needs: [windows, windows-x86, macos]
+    needs: [windows, macos]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     permissions:
@@ -78,5 +83,4 @@ jobs:
         with:
           files: |
             ScanLab-Setup.exe
-            ScanLab-Setup-x86.exe
             ScanLab.dmg

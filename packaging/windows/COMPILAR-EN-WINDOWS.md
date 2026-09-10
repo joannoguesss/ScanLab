@@ -46,12 +46,20 @@ Ese `.exe` ya funciona: pruébalo con el escáner conectado por USB.
    Incluye desinstalador (Configuración → Aplicaciones, y un acceso directo
    en el menú Inicio).
 
-Para la variante de 32 bits (necesaria si el driver TWAIN del escáner lo es),
-compila con un Python de 32 bits y luego:
+### Ayudante de 32 bits (opcional pero recomendado)
+
+Los drivers TWAIN de escáneres antiguos suelen ser de 32 bits y un programa de
+64 no puede cargarlos. PySide6 no existe en 32 bits, así que se compila aparte
+un ayudante sin interfaz, con **Python de 32 bits**:
 
 ```
-iscc /DX86 /F"ScanLab-Setup-x86" packaging\windows\installer.iss
+pip install pillow pytwain pywin32 pyinstaller
+pyinstaller --noconfirm --clean --windowed --onefile --name ScanLab-worker32 --collect-all twain --exclude-module PySide6 worker_launcher.py
 ```
+
+Copia el `dist\ScanLab-worker32.exe` resultante dentro de `dist\ScanLab\`
+antes de compilar el instalador. ScanLab lo usará solo si el camino de 64 bits
+no encuentra el escáner.
 
 ## Notas
 

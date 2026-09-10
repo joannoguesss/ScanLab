@@ -60,12 +60,17 @@ El V500 es un escáner **TWAIN**: en muchos equipos no tiene driver WIA (por eso
 ScanLab usa TWAIN primero, pero **un programa de 64 bits no puede cargar un
 driver TWAIN de 32 bits**, y el del V500 suele serlo.
 
-1. Abre ScanLab y ve a **Eines ▸ Diagnòstic…**. Mira la sección *TWAIN*:
-   - Si pone **"Fonts TWAIN trobades: 0"** → instala la versión de 32 bits:
-     **`ScanLab-Setup-x86.exe`**, en la misma página de Releases.
-   - Si aparece el escáner en la lista pero falla al escanear, copia el
-     informe (botón **Copia**) y ábrelo como incidencia en GitHub.
-2. El registro completo está en `%APPDATA%\ScanLab\worker.log`.
+ScanLab lo resuelve **solo**: si el proceso principal (64 bits) no ve ningún
+escáner, pasa a usar un ayudante de 32 bits que se instala con la app
+(`ScanLab-worker32.exe`) y recuerda la elección. Puede tardar unos segundos en
+cambiar; el piloto de la esquina inferior derecha se pondrá verde.
+
+Si sigue en rojo:
+
+1. Abre **Eines ▸ Diagnòstic…**. Verás dos informes, el del proceso principal
+   y el del ayudante de 32 bits, cada uno con su lista de fuentes TWAIN.
+2. Pulsa **Copia** y ábrelo como incidencia en GitHub.
+3. El registro completo está en `%APPDATA%\ScanLab\worker.log`.
 
 > ¿Prefieres compilarlo tú? Sigue
 > [packaging/windows/COMPILAR-EN-WINDOWS.md](packaging/windows/COMPILAR-EN-WINDOWS.md).
